@@ -192,21 +192,65 @@ def extract_transcript_with_fallback(url: str, preferred_langs: List[str], workd
     提取字幕，优先使用 API，失败则 ytdlp 兜底。
     返回 (items, detected_lang, title, source_name, chapters)。
     """
+    import traceback
+    import time
+    
     video_id = parse_video_id(url)
     title: Optional[str] = None
+    errors_log = []  # 收集错误日志
+    
     if not video_id:
-        return [], None, title, 'unknown', []
+        errors_log.append("❌ 无法解析视频ID")
+        raise Exception(f"无法解析视频ID。\n\n详细日志：\n" + "\n".join(errors_log))
+    
+    errors_log.append(f"✅ 视频ID: {video_id}")
+    errors_log.append(f"🔍 优先语言: {', '.join(preferred_langs)}")
+    
     # 先尝试 API
+    errors_log.append("\n【方法1】尝试使用 youtube-transcript-api...")
+    api_start_time = time.time()
     try:
         items, lang = _select_transcript(video_id, preferred_langs)
+        api_duration = time.time() - api_start_time
+        errors_log.append(f"✅ API 提取成功！耗时: {api_duration:.2f}秒")
+        errors_log.append(f"✅ 检测到语言: {lang}")
+        errors_log.append(f"✅ 字幕条目数: {len(items)}")
         # 获取视频标题（通过 transcript list 的 metadata 不稳定，这里不强求）
         title = None
         return items, lang, title, 'youtube-transcript-api', []
-    except Exception:
-        pass
+    except Exception as api_error:
+        api_duration = time.time() - api_start_time
+        errors_log.append(f"❌ API 提取失败！耗时: {api_duration:.2f}秒")
+        errors_log.append(f"❌ 错误类型: {type(api_error).__name__}")
+        errors_log.append(f"❌ 错误信息: {str(api_error)}")
+        errors_log.append(f"❌ 详细堆栈:\n{traceback.format_exc()}")
+    
     # 兜底：yt-dlp 解析 vtt
-    items, lang, title, chapters = _try_ytdlp_vtt(url, workdir)
-    return items, lang, title, 'yt-dlp', chapters
+    errors_log.append("\n【方法2】尝试使用 yt-dlp...")
+    ytdlp_start_time = time.time()
+    try:
+        items, lang, title, chapters = _try_ytdlp_vtt(url, workdir)
+        ytdlp_duration = time.time() - ytdlp_start_time
+        
+        if items:
+            errors_log.append(f"✅ yt-dlp 提取成功！耗时: {ytdlp_duration:.2f}秒")
+            errors_log.append(f"✅ 检测到语言: {lang}")
+            errors_log.append(f"✅ 字幕条目数: {len(items)}")
+            errors_log.append(f"✅ 视频标题: {title}")
+            errors_log.append(f"✅ 章节数: {len(chapters)}")
+            return items, lang, title, 'yt-dlp', chapters
+        else:
+            errors_log.append(f"❌ yt-dlp 未提取到字幕！耗时: {ytdlp_duration:.2f}秒")
+    except Exception as ytdlp_error:
+        ytdlp_duration = time.time() - ytdlp_start_time
+        errors_log.append(f"❌ yt-dlp 提取失败！耗时: {ytdlp_duration:.2f}秒")
+        errors_log.append(f"❌ 错误类型: {type(ytdlp_error).__name__}")
+        errors_log.append(f"❌ 错误信息: {str(ytdlp_error)}")
+        errors_log.append(f"❌ 详细堆栈:\n{traceback.format_exc()}")
+    
+    # 所有方法都失败了，抛出详细错误
+    errors_log.append("\n❌❌❌ 所有提取方法都失败了！")
+    raise Exception("字幕提取失败。\n\n详细日志：\n" + "\n".join(errors_log))
 
 
 

@@ -235,14 +235,36 @@ def process_video(config, progress_container=None):
         """, unsafe_allow_html=True)
         progress_bar.progress(10)
         
-        transcript_items, detected_lang, title, source_name, chapters = extract_transcript_with_fallback(
-            config["url"],
-            preferred_langs=config["source_langs"],
-            workdir=video_outdir
-        )
-        
-        if not transcript_items:
-            st.error("❌ 未能获取到任何字幕，请检查视频是否有字幕")
+        try:
+            transcript_items, detected_lang, title, source_name, chapters = extract_transcript_with_fallback(
+                config["url"],
+                preferred_langs=config["source_langs"],
+                workdir=video_outdir
+            )
+            
+            if not transcript_items:
+                st.error("❌ 未能获取到任何字幕，请检查视频是否有字幕")
+                st.warning("💡 可能的原因：")
+                st.info("1. 视频没有字幕\n2. 视频是私有的或有地区限制\n3. YouTube API 限制\n4. 网络连接问题")
+                return None
+        except Exception as subtitle_error:
+            st.error("❌ 字幕提取失败")
+            
+            # 显示详细的错误日志
+            error_message = str(subtitle_error)
+            if "详细日志：" in error_message:
+                # 分离错误消息和日志
+                parts = error_message.split("详细日志：", 1)
+                st.error(parts[0].strip())
+                
+                # 在可展开区域显示详细日志
+                with st.expander("🔍 查看详细日志（点击展开）", expanded=True):
+                    st.code(parts[1].strip(), language="text")
+            else:
+                st.error(f"错误信息：{error_message}")
+                with st.expander("🔍 查看详细堆栈", expanded=False):
+                    st.exception(subtitle_error)
+            
             return None
         
         status_text.success(f"✅ 提取字幕完成！检测到语言：{detected_lang}")
