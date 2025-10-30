@@ -1,0 +1,66 @@
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+.virtualenv/
+
+# 环境变量配置（敏感信息）
+.env
+.streamlit/secrets.toml
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# 输出文件
+outputs/
+
+# 预览文件
+previews/
+*.html
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# 测试覆盖率
+.coverage
+htmlcov/
+
+# 其他
+*.bak
+*.orig
+
